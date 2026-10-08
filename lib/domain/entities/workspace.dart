@@ -6,6 +6,7 @@ import 'browser_snapshot.dart';
 import 'git_snapshot.dart';
 import 'docker_snapshot.dart';
 import 'project_detection.dart';
+import 'workspace_task.dart';
 
 class Workspace extends Equatable {
   final String id;
@@ -21,6 +22,14 @@ class Workspace extends Equatable {
   final GitSnapshot? git;
   final DockerSnapshot? docker;
   final ProjectDetection? projectDetection;
+  final List<WorkspaceTask> tasks;
+  final String? notes;
+  final bool isFavorite;
+  final String? colorHex;
+  final String? iconName;
+  final List<String> startupCommands;
+  final Map<String, String> envVars;
+  final int restoreCount;
 
   const Workspace({
     required this.id,
@@ -36,6 +45,14 @@ class Workspace extends Equatable {
     this.git,
     this.docker,
     this.projectDetection,
+    this.tasks = const [],
+    this.notes,
+    this.isFavorite = false,
+    this.colorHex,
+    this.iconName,
+    this.startupCommands = const [],
+    this.envVars = const {},
+    this.restoreCount = 0,
   });
 
   Workspace copyWith({
@@ -52,6 +69,14 @@ class Workspace extends Equatable {
     GitSnapshot? git,
     DockerSnapshot? docker,
     ProjectDetection? projectDetection,
+    List<WorkspaceTask>? tasks,
+    String? notes,
+    bool? isFavorite,
+    String? colorHex,
+    String? iconName,
+    List<String>? startupCommands,
+    Map<String, String>? envVars,
+    int? restoreCount,
   }) {
     return Workspace(
       id: id ?? this.id,
@@ -67,6 +92,14 @@ class Workspace extends Equatable {
       git: git ?? this.git,
       docker: docker ?? this.docker,
       projectDetection: projectDetection ?? this.projectDetection,
+      tasks: tasks ?? this.tasks,
+      notes: notes ?? this.notes,
+      isFavorite: isFavorite ?? this.isFavorite,
+      colorHex: colorHex ?? this.colorHex,
+      iconName: iconName ?? this.iconName,
+      startupCommands: startupCommands ?? this.startupCommands,
+      envVars: envVars ?? this.envVars,
+      restoreCount: restoreCount ?? this.restoreCount,
     );
   }
 
@@ -85,5 +118,13 @@ class Workspace extends Equatable {
     git,
     docker,
     projectDetection,
+    tasks,
+    notes,
+    isFavorite,
+    colorHex,
+    iconName,
+    startupCommands,
+    envVars,
+    restoreCount,
   ];
 }

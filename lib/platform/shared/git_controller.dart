@@ -50,4 +50,40 @@ class GitController implements GitManager {
       return [];
     }
   }
+
+  @override
+  Future<String?> getCommitHash(String projectPath) async {
+    try {
+      final result = await Process.run(
+        'git',
+        ['rev-parse', '--short', 'HEAD'],
+        workingDirectory: projectPath,
+      );
+      if (result.exitCode == 0) {
+        final hash = result.stdout.toString().trim();
+        return hash.isNotEmpty ? hash : null;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<int> getUncommittedCount(String projectPath) async {
+    try {
+      final result = await Process.run(
+        'git',
+        ['status', '--porcelain'],
+        workingDirectory: projectPath,
+      );
+      if (result.exitCode == 0) {
+        final lines = result.stdout.toString().trim().split('\n');
+        return lines.where((l) => l.trim().isNotEmpty).length;
+      }
+      return 0;
+    } catch (_) {
+      return 0;
+    }
+  }
 }

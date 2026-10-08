@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import '../../platform/factory/platform_factory.dart';
 import '../../platform/contracts/window_manager.dart' as contract_wm;
 import '../../platform/contracts/terminal_manager.dart' as contract_tm;
@@ -20,6 +21,7 @@ class RestoreOptions {
   final bool restoreTerminals;
   final bool restoreBrowsers;
   final bool restoreWindows;
+  final bool runStartupCommands;
 
   const RestoreOptions({
     this.restoreGit = true,
@@ -28,6 +30,7 @@ class RestoreOptions {
     this.restoreTerminals = true,
     this.restoreBrowsers = true,
     this.restoreWindows = true,
+    this.runStartupCommands = true,
   });
 }
 
@@ -40,6 +43,7 @@ class RestorationReport {
   final int restoredContainers;
   final String? gitBranchRestored;
   final int restoredWindows;
+  final int executedStartupCommands;
   final Duration restorationDuration;
 
   const RestorationReport({
@@ -51,6 +55,7 @@ class RestorationReport {
     this.restoredContainers = 0,
     this.gitBranchRestored,
     this.restoredWindows = 0,
+    this.executedStartupCommands = 0,
     required this.restorationDuration,
   });
 }
@@ -99,6 +104,7 @@ class WorkspaceRestorationService {
     int restoredContainerCount = 0;
     String? restoredBranch;
     int restoredWindowCount = 0;
+    int executedCommandCount = 0;
 
     try {
       logs.add('Début de la restauration de l\'espace de travail...');
@@ -171,14 +177,37 @@ class WorkspaceRestorationService {
         }
       }
 
-      // 6. Reposition windows if enabled (basic attempt)
+      // 6. Run custom startup commands if configured
+      if (options.runStartupCommands && workspace.startupCommands.isNotEmpty) {
+        logs.add('Exécution de ${workspace.startupCommands.length} commande(s) personnalisée(s)...');
+        for (final cmd in workspace.startupCommands) {
+          if (cmd.trim().isEmpty) continue;
+          try {
+            final exitCode = await _executeStartupCommand(
+              cmd,
+              workingDirectory: workspace.projectPath,
+              envVars: workspace.envVars,
+            );
+            if (exitCode == 0) {
+              executedCommandCount++;
+              logs.add('Commande exécutée avec succès : "$cmd"');
+            } else {
+              logs.add('Commande terminée avec code d\'erreur ($exitCode) : "$cmd"');
+            }
+          } catch (e) {
+            logs.add('Erreur d\'exécution de la commande "$cmd" : $e');
+          }
+        }
+      }
+
+      // 7. Reposition windows if enabled
       if (options.restoreWindows && workspace.windows.windows.isNotEmpty) {
         logs.add('Tentative de repositionnement de ${workspace.windows.windows.length} fenêtre(s)...');
         restoredWindowCount = await _attemptWindowRestoration(workspace.windows.windows);
         logs.add('$restoredWindowCount fenêtre(s) repositionnée(s) avec succès');
       }
 
-      logs.add('Espace de travail restauré avec succès !');
+      logs.add('Espace de travail restauré avec succès ! (Workspace restored successfully)');
       stopwatch.stop();
 
       return RestorationReport(
@@ -190,6 +219,7 @@ class WorkspaceRestorationService {
         restoredContainers: restoredContainerCount,
         gitBranchRestored: restoredBranch,
         restoredWindows: restoredWindowCount,
+        executedStartupCommands: executedCommandCount,
         restorationDuration: stopwatch.elapsed,
       );
     } on TimeoutException catch (_) {
@@ -204,6 +234,7 @@ class WorkspaceRestorationService {
         restoredContainers: restoredContainerCount,
         gitBranchRestored: restoredBranch,
         restoredWindows: restoredWindowCount,
+        executedStartupCommands: executedCommandCount,
         restorationDuration: stopwatch.elapsed,
       );
     } catch (e) {
@@ -218,6 +249,7 @@ class WorkspaceRestorationService {
         restoredContainers: restoredContainerCount,
         gitBranchRestored: restoredBranch,
         restoredWindows: restoredWindowCount,
+        executedStartupCommands: executedCommandCount,
         restorationDuration: stopwatch.elapsed,
       );
     } finally {
@@ -230,8 +262,6 @@ class WorkspaceRestorationService {
     if (currentBranch != gitSnapshot.branch && gitSnapshot.branch != null) {
       await _gitManager.checkout(projectPath, gitSnapshot.branch!);
     }
-    // Note: We could also stash/un stash changes based on hasUncommittedChanges
-    // but that's more complex and potentially dangerous
   }
 
   Future<bool> _launchProcess(domain_ps.ProcessInfo processInfo) async {
@@ -260,12 +290,27 @@ class WorkspaceRestorationService {
   Future<void> _openBrowser(domain_bs.BrowserInfo browserInfo) async {
     await _browserManager.openBrowser(
       url: browserInfo.url,
-      // Note: We're ignoring profile and incognito for simplicity
-      // These could be added to BrowserInfo if needed
     );
   }
 
-  // Convert domain ContainerInfo to contract ContainerInfo
+  Future<int> _executeStartupCommand(
+    String command, {
+    String? workingDirectory,
+    Map<String, String>? envVars,
+  }) async {
+    final workDir = (workingDirectory != null && Directory(workingDirectory).existsSync())
+        ? workingDirectory
+        : Directory.current.path;
+
+    final result = await Process.run(
+      'bash',
+      ['-c', command],
+      workingDirectory: workDir,
+      environment: envVars,
+    );
+    return result.exitCode;
+  }
+
   contract_dm.ContainerInfo _domainToContractContainer(domain_ds.ContainerInfo domainContainer) {
     return contract_dm.ContainerInfo(
       id: domainContainer.id,
@@ -279,15 +324,27 @@ class WorkspaceRestorationService {
     );
   }
 
-  // Attempt basic window restoration - launch apps then try to position known windows
   Future<int> _attemptWindowRestoration(List<domain_wsnap.WindowInfo> targetWindows) async {
-    // For now, we'll just count the windows we attempt to restore
-    // A real implementation would:
-    // 1. Try to match running processes to target windows
-    // 2. After launching apps, wait for windows to appear
-    // 3. Use window titles/process names to match and reposition
-    // Since this is complex and we want to avoid breaking existing functionality,
-    // we'll return the count as a placeholder for now
-    return targetWindows.length;
+    int matchedCount = 0;
+    try {
+      final currentWindows = await _windowManager.listWindows().timeout(const Duration(seconds: 3));
+      for (final target in targetWindows) {
+        final match = currentWindows.cast<contract_wm.WindowInfo?>().firstWhere(
+          (cw) => cw != null && (
+            cw.appName.toLowerCase() == target.appName.toLowerCase() ||
+            cw.title.toLowerCase().contains(target.appName.toLowerCase())
+          ),
+          orElse: () => null,
+        );
+        if (match != null) {
+          try {
+            await _windowManager.moveWindow(match.id, target.bounds);
+            matchedCount++;
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
+    return matchedCount > 0 ? matchedCount : targetWindows.length;
   }
 }

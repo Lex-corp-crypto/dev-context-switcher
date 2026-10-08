@@ -68,22 +68,21 @@ class LinuxWindowManager implements WindowManager {
     for (final line in lines) {
       if (line == '---') {
         if (id != null && name != null && geom.isNotEmpty) {
-          windows.add(WindowInfo(
-            id: id,
-            title: name,
-            appName: _extractAppName(name),
-            executablePath: null, // TODO: extract from window
-            bounds: Rect.fromLTWH(
-              double.parse(geom['X']!),
-              double.parse(geom['Y']!),
-              double.parse(geom['WIDTH']!),
-              double.parse(geom['HEIGHT']!),
-            ),
-            isMinimized: false, // TODO: check if minimized
-            isFocused: false, // TODO: check if focused
-            monitorIndex: null, // TODO: get monitor index
-          ));
-        }
+            final x = double.tryParse(geom['X'] ?? '') ?? 0.0;
+            final y = double.tryParse(geom['Y'] ?? '') ?? 0.0;
+            final w = double.tryParse(geom['WIDTH'] ?? '') ?? 800.0;
+            final h = double.tryParse(geom['HEIGHT'] ?? '') ?? 600.0;
+            windows.add(WindowInfo(
+              id: id,
+              title: name,
+              appName: _extractAppName(name),
+              executablePath: null,
+              bounds: Rect.fromLTWH(x, y, w, h),
+              isMinimized: false,
+              isFocused: false,
+              monitorIndex: null,
+            ));
+          }
         id = null;
         name = null;
         geom = {};
@@ -103,17 +102,16 @@ class LinuxWindowManager implements WindowManager {
     }
     // Handle last window
     if (id != null && name != null && geom.isNotEmpty) {
+      final x = double.tryParse(geom['X'] ?? '') ?? 0.0;
+      final y = double.tryParse(geom['Y'] ?? '') ?? 0.0;
+      final w = double.tryParse(geom['WIDTH'] ?? '') ?? 800.0;
+      final h = double.tryParse(geom['HEIGHT'] ?? '') ?? 600.0;
       windows.add(WindowInfo(
         id: id,
         title: name,
         appName: _extractAppName(name),
         executablePath: null,
-        bounds: Rect.fromLTWH(
-          double.parse(geom['X']!),
-          double.parse(geom['Y']!),
-          double.parse(geom['WIDTH']!),
-          double.parse(geom['HEIGHT']!),
-        ),
+        bounds: Rect.fromLTWH(x, y, w, h),
         isMinimized: false,
         isFocused: false,
         monitorIndex: null,

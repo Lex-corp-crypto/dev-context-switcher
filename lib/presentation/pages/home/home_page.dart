@@ -390,37 +390,80 @@ class _HomePageState extends ConsumerState<HomePage> {
           orElse: () => const SizedBox.shrink(),
         ),
 
-        // Tags bar if any tags exist
-        if (allTags.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  ChoiceChip(
-                    label: const Text('Tous'),
-                    selected: selectedTag == null,
-                    onSelected: (_) => ref.read(selectedTagFilterProvider.notifier).state = null,
-                  ),
-                  const SizedBox(width: 6),
-                  ...allTags.map((tag) {
-                    final isSel = selectedTag == tag;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 6.0),
-                      child: ChoiceChip(
-                        label: Text('#$tag'),
-                        selected: isSel,
-                        onSelected: (val) {
-                          ref.read(selectedTagFilterProvider.notifier).state = val ? tag : null;
+        // Filter & Sort Bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Tous'),
+                        selected: selectedTag == null && !ref.watch(showOnlyFavoritesProvider),
+                        onSelected: (_) {
+                          ref.read(selectedTagFilterProvider.notifier).state = null;
+                          ref.read(showOnlyFavoritesProvider.notifier).state = false;
                         },
                       ),
-                    );
-                  }),
+                      const SizedBox(width: 6),
+                      FilterChip(
+                        avatar: const Icon(Icons.star, size: 14, color: Colors.amber),
+                        label: const Text('Favoris'),
+                        selected: ref.watch(showOnlyFavoritesProvider),
+                        onSelected: (val) {
+                          ref.read(showOnlyFavoritesProvider.notifier).state = val;
+                        },
+                      ),
+                      if (allTags.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        ...allTags.map((tag) {
+                          final isSel = selectedTag == tag;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6.0),
+                            child: ChoiceChip(
+                              label: Text('#$tag'),
+                              selected: isSel,
+                              onSelected: (val) {
+                                ref.read(selectedTagFilterProvider.notifier).state = val ? tag : null;
+                              },
+                            ),
+                          );
+                        }),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<WorkspaceSort>(
+                tooltip: 'Trier les workspaces',
+                icon: const Icon(Icons.sort, size: 20),
+                onSelected: (sort) => ref.read(sortOptionProvider.notifier).state = sort,
+                itemBuilder: (ctx) => const [
+                  PopupMenuItem(
+                    value: WorkspaceSort.favoritesFirst,
+                    child: Text('Favoris d\'abord'),
+                  ),
+                  PopupMenuItem(
+                    value: WorkspaceSort.newest,
+                    child: Text('Plus récents'),
+                  ),
+                  PopupMenuItem(
+                    value: WorkspaceSort.lastRestored,
+                    child: Text('Dernière restauration'),
+                  ),
+                  PopupMenuItem(
+                    value: WorkspaceSort.alphabetical,
+                    child: Text('Alphabétique (A-Z)'),
+                  ),
                 ],
               ),
-            ),
+            ],
           ),
+        ),
 
         // Workspaces list
         Expanded(

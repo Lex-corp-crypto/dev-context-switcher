@@ -6,6 +6,7 @@ import '../../../domain/entities/browser_snapshot.dart';
 import '../../../domain/entities/git_snapshot.dart';
 import '../../../domain/entities/docker_snapshot.dart';
 import '../../../domain/entities/project_detection.dart';
+import '../../../domain/entities/workspace_task.dart';
 
 class WorkspaceModel {
   final String id;
@@ -21,6 +22,14 @@ class WorkspaceModel {
   final Map<String, dynamic>? git;
   final Map<String, dynamic>? docker;
   final Map<String, dynamic>? projectDetection;
+  final List<Map<String, dynamic>> tasks;
+  final String? notes;
+  final bool isFavorite;
+  final String? colorHex;
+  final String? iconName;
+  final List<String> startupCommands;
+  final Map<String, String> envVars;
+  final int restoreCount;
 
   WorkspaceModel({
     required this.id,
@@ -36,6 +45,14 @@ class WorkspaceModel {
     this.git,
     this.docker,
     this.projectDetection,
+    this.tasks = const [],
+    this.notes,
+    this.isFavorite = false,
+    this.colorHex,
+    this.iconName,
+    this.startupCommands = const [],
+    this.envVars = const {},
+    this.restoreCount = 0,
   });
 
   factory WorkspaceModel.fromEntity(Workspace entity) {
@@ -53,6 +70,14 @@ class WorkspaceModel {
       git: entity.git?.toJson(),
       docker: entity.docker?.toJson(),
       projectDetection: entity.projectDetection?.toJson(),
+      tasks: entity.tasks.map((t) => t.toJson()).toList(),
+      notes: entity.notes,
+      isFavorite: entity.isFavorite,
+      colorHex: entity.colorHex,
+      iconName: entity.iconName,
+      startupCommands: entity.startupCommands,
+      envVars: entity.envVars,
+      restoreCount: entity.restoreCount,
     );
   }
 
@@ -73,6 +98,14 @@ class WorkspaceModel {
       projectDetection: projectDetection != null
           ? ProjectDetection.fromJson(projectDetection!)
           : null,
+      tasks: tasks.map((t) => WorkspaceTask.fromJson(t)).toList(),
+      notes: notes,
+      isFavorite: isFavorite,
+      colorHex: colorHex,
+      iconName: iconName,
+      startupCommands: startupCommands,
+      envVars: envVars,
+      restoreCount: restoreCount,
     );
   }
 
@@ -90,23 +123,42 @@ class WorkspaceModel {
         'git': git,
         'docker': docker,
         'projectDetection': projectDetection,
+        'tasks': tasks,
+        'notes': notes,
+        'isFavorite': isFavorite,
+        'colorHex': colorHex,
+        'iconName': iconName,
+        'startupCommands': startupCommands,
+        'envVars': envVars,
+        'restoreCount': restoreCount,
       };
 
   factory WorkspaceModel.fromJson(Map<String, dynamic> json) => WorkspaceModel(
-        id: json['id'],
-        name: json['name'],
-        projectPath: json['projectPath'],
+        id: json['id'] as String,
+        name: json['name'] as String,
+        projectPath: json['projectPath'] as String?,
         tags: List<String>.from(json['tags'] ?? []),
-        createdAt: DateTime.parse(json['createdAt']),
+        createdAt: DateTime.parse(json['createdAt'] as String),
         lastRestoredAt: json['lastRestoredAt'] != null
-            ? DateTime.parse(json['lastRestoredAt'])
+            ? DateTime.parse(json['lastRestoredAt'] as String)
             : null,
-        windows: json['windows'] ?? {},
-        processes: json['processes'] ?? {},
-        terminals: json['terminals'] ?? {},
-        browsers: json['browsers'] ?? {},
-        git: json['git'],
-        docker: json['docker'],
-        projectDetection: json['projectDetection'],
+        windows: (json['windows'] as Map<String, dynamic>?) ?? {},
+        processes: (json['processes'] as Map<String, dynamic>?) ?? {},
+        terminals: (json['terminals'] as Map<String, dynamic>?) ?? {},
+        browsers: (json['browsers'] as Map<String, dynamic>?) ?? {},
+        git: json['git'] as Map<String, dynamic>?,
+        docker: json['docker'] as Map<String, dynamic>?,
+        projectDetection: json['projectDetection'] as Map<String, dynamic>?,
+        tasks: (json['tasks'] as List<dynamic>?)
+                ?.map((e) => Map<String, dynamic>.from(e as Map))
+                .toList() ??
+            [],
+        notes: json['notes'] as String?,
+        isFavorite: json['isFavorite'] as bool? ?? false,
+        colorHex: json['colorHex'] as String?,
+        iconName: json['iconName'] as String?,
+        startupCommands: List<String>.from(json['startupCommands'] ?? []),
+        envVars: Map<String, String>.from(json['envVars'] ?? {}),
+        restoreCount: json['restoreCount'] as int? ?? 0,
       );
 }

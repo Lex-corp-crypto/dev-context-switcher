@@ -6,6 +6,7 @@ import '../../../../domain/entities/process_snapshot.dart';
 import '../../../../domain/entities/terminal_snapshot.dart';
 import '../../../../domain/entities/browser_snapshot.dart';
 import '../../../../domain/entities/docker_snapshot.dart';
+import '../../../../domain/entities/workspace_task.dart';
 import '../../providers/workspace_provider.dart';
 
 class TemplateItem {
@@ -32,7 +33,7 @@ class TemplatesPage extends ConsumerWidget {
   static final List<TemplateItem> templates = [
     TemplateItem(
       name: 'Flutter Desktop & Web',
-      description: 'Environnement Flutter complet avec terminaux d\'exécution, tests et navigateurs de dev.',
+      description: 'Environnement Flutter complet avec terminaux de run & test, docs officielles et tâches initiales.',
       icon: Icons.flutter_dash,
       color: Colors.blue,
       tags: ['flutter', 'mobile', 'desktop', 'dart'],
@@ -42,6 +43,14 @@ class TemplatesPage extends ConsumerWidget {
         projectPath: '',
         tags: const ['flutter', 'dart', 'mobile'],
         createdAt: DateTime.now(),
+        colorHex: 'FF2196F3',
+        notes: 'Stack Flutter Desktop & Web.\nCommandes utiles : flutter test, flutter run -d linux',
+        startupCommands: const ['flutter pub get'],
+        tasks: [
+          WorkspaceTask(id: 'f1', title: 'Exécuter les tests unitaires (flutter test)', isCompleted: false),
+          WorkspaceTask(id: 'f2', title: 'Lancer l\'application sur Linux (flutter run -d linux)', isCompleted: false),
+          WorkspaceTask(id: 'f3', title: 'Vérifier l\'analyse statique (flutter analyze)', isCompleted: false),
+        ],
         windows: const WindowSnapshot(windows: []),
         processes: const ProcessSnapshot(processes: [
           ProcessInfo(pid: 0, name: 'dart', commandLine: 'dart run'),
@@ -58,7 +67,7 @@ class TemplatesPage extends ConsumerWidget {
     ),
     TemplateItem(
       name: 'Full-Stack Web (Node & React)',
-      description: 'Serveur backend Node/Express + Frontend React/Next.js avec onglets localhost.',
+      description: 'Serveur backend Node/Express + Frontend React/Next.js avec onglets localhost et tâches de dev.',
       icon: Icons.javascript,
       color: Colors.green,
       tags: ['react', 'node', 'fullstack', 'typescript'],
@@ -68,6 +77,14 @@ class TemplatesPage extends ConsumerWidget {
         projectPath: '',
         tags: const ['node', 'react', 'web'],
         createdAt: DateTime.now(),
+        colorHex: 'FF4CAF50',
+        notes: 'Frontend sur port 3000, API Backend sur port 5000.\nVariables env : NODE_ENV=development',
+        startupCommands: const ['npm run dev'],
+        tasks: [
+          WorkspaceTask(id: 'w1', title: 'Installer dépendances (npm install)', isCompleted: false),
+          WorkspaceTask(id: 'w2', title: 'Vérifier la connexion avec l\'API backend', isCompleted: false),
+          WorkspaceTask(id: 'w3', title: 'Lancer tests d\'intégration end-to-end', isCompleted: false),
+        ],
         windows: const WindowSnapshot(windows: []),
         processes: const ProcessSnapshot(processes: [
           ProcessInfo(pid: 0, name: 'node', commandLine: 'npm run dev'),
@@ -83,9 +100,41 @@ class TemplatesPage extends ConsumerWidget {
       ),
     ),
     TemplateItem(
+      name: 'Rust Systems & High-Perf Backend',
+      description: 'Workspace Rust avec cargo watch, tests automatiques et documentation crates.io.',
+      icon: Icons.memory,
+      color: Colors.deepOrange,
+      tags: ['rust', 'systems', 'cargo', 'backend'],
+      createWorkspace: () => Workspace(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: 'Rust High-Perf Studio',
+        projectPath: '',
+        tags: const ['rust', 'backend', 'performance'],
+        createdAt: DateTime.now(),
+        colorHex: 'FFFF5722',
+        notes: 'Toolchain Rust stable. Utiliser "cargo check" pour la validation rapide.',
+        startupCommands: const ['cargo check'],
+        tasks: [
+          WorkspaceTask(id: 'r1', title: 'Compiler en mode debug (cargo build)', isCompleted: false),
+          WorkspaceTask(id: 'r2', title: 'Lancer suite de tests (cargo test)', isCompleted: false),
+          WorkspaceTask(id: 'r3', title: 'Benchmark de performance (cargo bench)', isCompleted: false),
+        ],
+        windows: const WindowSnapshot(windows: []),
+        processes: const ProcessSnapshot(processes: []),
+        terminals: const TerminalSnapshot(terminals: [
+          TerminalInfo(id: '1', workingDirectory: '.', shell: 'bash', recentCommands: ['cargo watch -x run']),
+          TerminalInfo(id: '2', workingDirectory: '.', shell: 'bash', recentCommands: ['cargo test']),
+        ]),
+        browsers: const BrowserSnapshot(browsers: [
+          BrowserInfo(id: '1', url: 'https://docs.rs', title: 'Docs.rs', browserName: 'default'),
+          BrowserInfo(id: '2', url: 'https://crates.io', title: 'Crates.io', browserName: 'default'),
+        ]),
+      ),
+    ),
+    TemplateItem(
       name: 'Python AI & Data Science',
-      description: 'Stack IA avec Jupyter Notebook, FastAPI server et dashboard de données.',
-      icon: Icons.code,
+      description: 'Stack IA avec Jupyter Notebook, FastAPI server et dashboard de données interactif.',
+      icon: Icons.psychology,
       color: Colors.amber,
       tags: ['python', 'ai', 'fastapi', 'data'],
       createWorkspace: () => Workspace(
@@ -94,6 +143,14 @@ class TemplatesPage extends ConsumerWidget {
         projectPath: '',
         tags: const ['python', 'ai', 'fastapi'],
         createdAt: DateTime.now(),
+        colorHex: 'FFFFC107',
+        notes: 'Environnement virtuel : venv.\nModèles stockés dans ./models',
+        startupCommands: const ['source venv/bin/activate'],
+        tasks: [
+          WorkspaceTask(id: 'p1', title: 'Activer l\'environnement virtuel venv', isCompleted: false),
+          WorkspaceTask(id: 'p2', title: 'Lancer le notebook Jupyter pour l\'exploration', isCompleted: false),
+          WorkspaceTask(id: 'p3', title: 'Tester les endpoints FastAPI', isCompleted: false),
+        ],
         windows: const WindowSnapshot(windows: []),
         processes: const ProcessSnapshot(processes: [
           ProcessInfo(pid: 0, name: 'uvicorn', commandLine: 'uvicorn main:app --reload'),
@@ -104,6 +161,38 @@ class TemplatesPage extends ConsumerWidget {
         browsers: const BrowserSnapshot(browsers: [
           BrowserInfo(id: '1', url: 'http://localhost:8888', title: 'Jupyter Lab', browserName: 'default'),
           BrowserInfo(id: '2', url: 'http://localhost:8000/docs', title: 'FastAPI Swagger', browserName: 'default'),
+        ]),
+      ),
+    ),
+    TemplateItem(
+      name: 'Next.js & Supabase Modern Fullstack',
+      description: 'Stack moderne Next.js App Router avec base Supabase locale et studio.',
+      icon: Icons.bolt,
+      color: Colors.teal,
+      tags: ['nextjs', 'supabase', 'typescript', 'tailwind'],
+      createWorkspace: () => Workspace(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: 'Next.js & Supabase Suite',
+        projectPath: '',
+        tags: const ['nextjs', 'supabase', 'fullstack'],
+        createdAt: DateTime.now(),
+        colorHex: 'FF009688',
+        notes: 'Supabase Studio : http://localhost:54323\nApp locale : http://localhost:3000',
+        startupCommands: const ['npm run dev'],
+        tasks: [
+          WorkspaceTask(id: 'n1', title: 'Démarrer Supabase en local (supabase start)', isCompleted: false),
+          WorkspaceTask(id: 'n2', title: 'Vérifier migrations de base de données', isCompleted: false),
+          WorkspaceTask(id: 'n3', title: 'Tester flux d\'authentification OAuth', isCompleted: false),
+        ],
+        windows: const WindowSnapshot(windows: []),
+        processes: const ProcessSnapshot(processes: []),
+        terminals: const TerminalSnapshot(terminals: [
+          TerminalInfo(id: '1', workingDirectory: '.', shell: 'bash', recentCommands: ['npm run dev']),
+          TerminalInfo(id: '2', workingDirectory: '.', shell: 'bash', recentCommands: ['npx supabase status']),
+        ]),
+        browsers: const BrowserSnapshot(browsers: [
+          BrowserInfo(id: '1', url: 'http://localhost:3000', title: 'Next.js App', browserName: 'default'),
+          BrowserInfo(id: '2', url: 'http://localhost:54323', title: 'Supabase Studio', browserName: 'default'),
         ]),
       ),
     ),
@@ -119,6 +208,13 @@ class TemplatesPage extends ConsumerWidget {
         projectPath: '',
         tags: const ['docker', 'devops', 'database'],
         createdAt: DateTime.now(),
+        colorHex: 'FF00BCD4',
+        notes: 'Gestion des conteneurs via Docker Compose.\nAdminer DB : http://localhost:8080',
+        startupCommands: const ['docker compose up -d'],
+        tasks: [
+          WorkspaceTask(id: 'd1', title: 'Vérifier la santé des conteneurs Docker', isCompleted: false),
+          WorkspaceTask(id: 'd2', title: 'Inspecter les logs de Postgres & Redis', isCompleted: false),
+        ],
         windows: const WindowSnapshot(windows: []),
         processes: const ProcessSnapshot(processes: []),
         terminals: const TerminalSnapshot(terminals: [
@@ -148,7 +244,7 @@ class TemplatesPage extends ConsumerWidget {
         padding: const EdgeInsets.all(20.0),
         children: [
           Text(
-            'Choisissez un modèle préconfiguré pour démarrer immédiatement :',
+            'Choisissez un modèle préconfiguré pour démarrer immédiatement votre environnement :',
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               fontSize: 14,
@@ -221,7 +317,7 @@ class TemplatesPage extends ConsumerWidget {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Workspace "${tpl.name}" ajouté à votre tableau de bord !'),
+                              content: Text('Workspace "${tpl.name}" ajouté avec succès !'),
                               behavior: SnackBarBehavior.floating,
                             ),
                           );

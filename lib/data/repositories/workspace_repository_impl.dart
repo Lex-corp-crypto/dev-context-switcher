@@ -88,6 +88,7 @@ class WorkspaceRepositoryImpl implements WorkspaceRepository {
     if (workspace != null) {
       final updated = workspace.copyWith(
         lastRestoredAt: DateTime.now(),
+        restoreCount: workspace.restoreCount + 1,
       );
       await update(updated);
     }

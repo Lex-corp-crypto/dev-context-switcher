@@ -49,7 +49,7 @@ class LinuxTerminalManager implements TerminalManager {
     final cmd = command ?? '';
 
     // Prefer detected terminal emulator
-    final candidates = ['x-terminal-emulator', 'cosmic-term', 'konsole', 'gnome-terminal', 'xfce4-terminal', 'alacritty', 'xterm'];
+    final candidates = ['ptyxis', 'cosmic-term', 'konsole', 'gnome-terminal', 'alacritty', 'kitty', 'foot', 'xfce4-terminal', 'x-terminal-emulator', 'xterm'];
     String? chosenTerminal;
     for (final cand in candidates) {
       try {

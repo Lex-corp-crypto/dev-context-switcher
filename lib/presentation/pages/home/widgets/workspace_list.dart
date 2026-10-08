@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../domain/entities/workspace.dart';
+import '../../../../platform/factory/platform_factory.dart';
 import '../../../providers/workspace_provider.dart';
 
 class WorkspaceList extends ConsumerStatefulWidget {
@@ -40,7 +41,7 @@ class _WorkspaceListState extends ConsumerState<WorkspaceList> {
                 Expanded(
                   child: Text(
                     report.success
-                        ? 'Workspace "${ws.name}" restauré !'
+                        ? 'Workspace "${ws.name}" restauré ! (${report.restoredProcesses} proc, ${report.restoredTerminals} term)'
                         : 'Restauration partielle de "${ws.name}"',
                   ),
                 ),
@@ -97,6 +98,25 @@ class _WorkspaceListState extends ConsumerState<WorkspaceList> {
     );
   }
 
+  Future<void> _openVsCode(String path) async {
+    try {
+      final vscode = PlatformFactory.createVscodeManager();
+      await vscode.openFolder(path);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ouverture dans VS Code...'), duration: Duration(seconds: 1), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _openTerminal(String path) async {
+    try {
+      final term = PlatformFactory.createTerminalManager();
+      await term.openTerminal(workingDirectory: path);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.workspaces.isEmpty) {
@@ -118,7 +138,7 @@ class _WorkspaceListState extends ConsumerState<WorkspaceList> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Capturez votre environnement de travail actuel en un clic pour pouvoir y revenir instantanément.',
+                'Capturez votre environnement de travail actuel en un clic pour pouvoir y basculer instantanément.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
               ),
@@ -141,13 +161,24 @@ class _WorkspaceListState extends ConsumerState<WorkspaceList> {
         final ws = widget.workspaces[index];
         final isRestoring = _restoringId == ws.id;
 
+        final completedTasks = ws.tasks.where((t) => t.isCompleted).length;
+        final totalTasks = ws.tasks.length;
+
+        final Color? customColor = ws.colorHex != null
+            ? Color(int.parse(ws.colorHex!, radix: 16))
+            : null;
+
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
-          elevation: 1.5,
+          elevation: ws.isFavorite ? 2.5 : 1.2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
             side: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
+              color: customColor ??
+                  (ws.isFavorite
+                      ? Colors.amber.withOpacity(0.6)
+                      : Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4)),
+              width: ws.isFavorite ? 1.5 : 1.0,
             ),
           ),
           child: InkWell(
@@ -158,19 +189,19 @@ class _WorkspaceListState extends ConsumerState<WorkspaceList> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title row & menu
+                  // Title row & action buttons
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+                          color: (customColor ?? Theme.of(context).colorScheme.primary).withOpacity(0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
                           Icons.devices_other,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: customColor ?? Theme.of(context).colorScheme.primary,
                           size: 22,
                         ),
                       ),
@@ -179,12 +210,24 @@ class _WorkspaceListState extends ConsumerState<WorkspaceList> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              ws.name,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    ws.name,
+                                    style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (ws.isFavorite) ...[
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.star, color: Colors.amber, size: 16),
+                                ],
+                              ],
                             ),
                             if (ws.projectPath != null && ws.projectPath!.isNotEmpty) ...[
                               const SizedBox(height: 2),
@@ -211,6 +254,18 @@ class _WorkspaceListState extends ConsumerState<WorkspaceList> {
                           ],
                         ),
                       ),
+
+                      // Quick action icons (Star, VS Code)
+                      IconButton(
+                        icon: Icon(
+                          ws.isFavorite ? Icons.star : Icons.star_border,
+                          color: ws.isFavorite ? Colors.amber : Colors.grey,
+                          size: 20,
+                        ),
+                        tooltip: ws.isFavorite ? 'Retirer des favoris' : 'Favori',
+                        onPressed: () => ref.read(workspaceProvider.notifier).toggleFavorite(ws.id),
+                      ),
+
                       // Restore button
                       FilledButton.icon(
                         onPressed: isRestoring ? null : () => _restoreWorkspace(ws),
@@ -224,10 +279,14 @@ class _WorkspaceListState extends ConsumerState<WorkspaceList> {
                         label: Text(isRestoring ? 'En cours...' : 'Restaurer'),
                       ),
                       const SizedBox(width: 4),
+
+                      // Overflow Menu
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert),
                         onSelected: (action) {
                           if (action == 'detail') widget.onOpenDetail?.call(ws);
+                          if (action == 'vscode' && ws.projectPath != null) _openVsCode(ws.projectPath!);
+                          if (action == 'terminal' && ws.projectPath != null) _openTerminal(ws.projectPath!);
                           if (action == 'duplicate') ref.read(workspaceProvider.notifier).duplicate(ws.id);
                           if (action == 'export') _showExportDialog(ws);
                           if (action == 'delete') _showDeleteDialog(ws);
@@ -243,6 +302,28 @@ class _WorkspaceListState extends ConsumerState<WorkspaceList> {
                               ],
                             ),
                           ),
+                          if (ws.projectPath != null && ws.projectPath!.isNotEmpty) ...[
+                            const PopupMenuItem(
+                              value: 'vscode',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.code, size: 18, color: Colors.blue),
+                                  SizedBox(width: 10),
+                                  Text('Ouvrir dans VS Code'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'terminal',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.terminal, size: 18, color: Colors.teal),
+                                  SizedBox(width: 10),
+                                  Text('Ouvrir dans Terminal'),
+                                ],
+                              ),
+                            ),
+                          ],
                           const PopupMenuItem(
                             value: 'duplicate',
                             child: Row(
@@ -316,6 +397,27 @@ class _WorkspaceListState extends ConsumerState<WorkspaceList> {
                           Icons.grid_view,
                           '${ws.docker!.containers.length} docker',
                           Colors.cyan,
+                        ),
+                      if (totalTasks > 0)
+                        _buildIndicatorChip(
+                          context,
+                          Icons.checklist,
+                          '$completedTasks/$totalTasks tâches',
+                          completedTasks == totalTasks ? Colors.green : Colors.indigoAccent,
+                        ),
+                      if (ws.restoreCount > 0)
+                        _buildIndicatorChip(
+                          context,
+                          Icons.repeat,
+                          '${ws.restoreCount}x',
+                          Colors.blueGrey,
+                        ),
+                      if (ws.startupCommands.isNotEmpty)
+                        _buildIndicatorChip(
+                          context,
+                          Icons.bolt,
+                          '${ws.startupCommands.length} cmd',
+                          Colors.deepPurpleAccent,
                         ),
                       if (ws.git != null && ws.git!.branch != null)
                         Container(

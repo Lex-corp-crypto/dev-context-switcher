@@ -38,7 +38,7 @@ class ProjectDetectorService {
       } catch (_) {}
     }
 
-    // 2. Check for Node.js / TypeScript / React / Next.js
+    // 2. Check for Node.js / TypeScript / React / Next.js / Vue / Svelte
     final packageJson = File('${dir.path}/package.json');
     if (projectType == null && await packageJson.exists()) {
       projectType = 'node';
@@ -53,8 +53,11 @@ class ProjectDetectorService {
           projectType = 'vue';
         } else if (content.contains('"@angular/core"')) {
           projectType = 'angular';
+        } else if (content.contains('"svelte"')) {
+          projectType = 'svelte';
+        } else if (content.contains('"astro"')) {
+          projectType = 'astro';
         }
-        // Extract basic package names
         final depMatch = RegExp(r'"dependencies"\s*:\s*\{([^}]+)\}').firstMatch(content);
         if (depMatch != null) {
           final depBlock = depMatch.group(1) ?? '';
@@ -69,9 +72,12 @@ class ProjectDetectorService {
     // 3. Check for Python
     final pyproject = File('${dir.path}/pyproject.toml');
     final reqs = File('${dir.path}/requirements.txt');
-    if (projectType == null && (await pyproject.exists() || await reqs.exists())) {
+    final pipfile = File('${dir.path}/Pipfile');
+    if (projectType == null && (await pyproject.exists() || await reqs.exists() || await pipfile.exists())) {
       projectType = 'python';
-      detectedBy = await pyproject.exists() ? 'pyproject.toml' : 'requirements.txt';
+      detectedBy = await pyproject.exists()
+          ? 'pyproject.toml'
+          : (await reqs.exists() ? 'requirements.txt' : 'Pipfile');
       if (await reqs.exists()) {
         try {
           final lines = await reqs.readAsLines();
@@ -90,6 +96,21 @@ class ProjectDetectorService {
     if (projectType == null && await cargo.exists()) {
       projectType = 'rust';
       detectedBy = 'Cargo.toml';
+      try {
+        final lines = await cargo.readAsLines();
+        bool inDeps = false;
+        for (final line in lines) {
+          final trimmed = line.trim();
+          if (trimmed.startsWith('[dependencies]')) {
+            inDeps = true;
+            continue;
+          }
+          if (inDeps && trimmed.startsWith('[')) inDeps = false;
+          if (inDeps && trimmed.contains('=') && !trimmed.startsWith('#')) {
+            dependencies.add(trimmed.split('=').first.trim());
+          }
+        }
+      } catch (_) {}
     }
 
     // 5. Check for Go
@@ -102,12 +123,37 @@ class ProjectDetectorService {
     // 6. Check for Java / Kotlin
     final pom = File('${dir.path}/pom.xml');
     final gradle = File('${dir.path}/build.gradle');
-    if (projectType == null && (await pom.exists() || await gradle.exists())) {
+    final gradleKts = File('${dir.path}/build.gradle.kts');
+    if (projectType == null && (await pom.exists() || await gradle.exists() || await gradleKts.exists())) {
       projectType = 'java';
-      detectedBy = await pom.exists() ? 'pom.xml' : 'build.gradle';
+      detectedBy = await pom.exists()
+          ? 'pom.xml'
+          : (await gradle.exists() ? 'build.gradle' : 'build.gradle.kts');
     }
 
-    // 7. Check for Git repository
+    // 7. Check for PHP / Laravel
+    final composer = File('${dir.path}/composer.json');
+    if (projectType == null && await composer.exists()) {
+      projectType = 'php';
+      detectedBy = 'composer.json';
+    }
+
+    // 8. Check for C / C++
+    final cmake = File('${dir.path}/CMakeLists.txt');
+    if (projectType == null && await cmake.exists()) {
+      projectType = 'cpp';
+      detectedBy = 'CMakeLists.txt';
+    }
+
+    // 9. Check for Docker Compose
+    final composeYml = File('${dir.path}/docker-compose.yml');
+    final composeYaml = File('${dir.path}/compose.yaml');
+    if (projectType == null && (await composeYml.exists() || await composeYaml.exists())) {
+      projectType = 'docker';
+      detectedBy = await composeYml.exists() ? 'docker-compose.yml' : 'compose.yaml';
+    }
+
+    // 10. Check for Git repository
     final gitDir = Directory('${dir.path}/.git');
     if (await gitDir.exists() && projectType == null) {
       projectType = 'git';

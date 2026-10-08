@@ -14,6 +14,7 @@ import '../../domain/entities/browser_snapshot.dart' as domain_bsnap;
 import '../../domain/entities/git_snapshot.dart' as domain_gsnap;
 import '../../domain/entities/docker_snapshot.dart' as domain_dsnap;
 import '../../domain/entities/project_detection.dart' as domain_pdetect;
+import '../../domain/entities/workspace_task.dart';
 import 'project_detector_service.dart';
 
 class WorkspaceCaptureService {
@@ -88,6 +89,13 @@ class WorkspaceCaptureService {
     List<domain_bsnap.BrowserInfo>? selectedBrowsers,
     List<domain_dsnap.ContainerInfo>? selectedContainers,
     domain_gsnap.GitSnapshot? customGitSnapshot,
+    List<WorkspaceTask> tasks = const [],
+    String? notes,
+    bool isFavorite = false,
+    String? colorHex,
+    String? iconName,
+    List<String> startupCommands = const [],
+    Map<String, String> envVars = const {},
     Duration timeout = const Duration(seconds: 30),
   }) async {
     if (_isCapturing) {
@@ -163,6 +171,13 @@ class WorkspaceCaptureService {
               )
             : null,
         projectDetection: projectDetection,
+        tasks: tasks,
+        notes: notes,
+        isFavorite: isFavorite,
+        colorHex: colorHex,
+        iconName: iconName,
+        startupCommands: startupCommands,
+        envVars: envVars,
       );
 
       stopwatch.stop();
@@ -243,15 +258,15 @@ class WorkspaceCaptureService {
       final branch = await _gitManager.getCurrentBranch(projectPath).timeout(const Duration(seconds: 5));
       final hasUncommittedChanges = await _gitManager.hasUncommittedChanges(projectPath).timeout(const Duration(seconds: 5));
       final recentBranches = await _gitManager.getRecentBranches(projectPath, limit: 10).timeout(const Duration(seconds: 5));
-
-      // Note: Getting commit hash would require additional GitManager method
-      // For now, we'll leave it as null and potentially add it later
+      final commitHash = await _gitManager.getCommitHash(projectPath).timeout(const Duration(seconds: 5));
+      final uncommittedCount = await _gitManager.getUncommittedCount(projectPath).timeout(const Duration(seconds: 5));
 
       return {
         'branch': branch,
-        'commitHash': null, // TODO: Add method to get commit hash
+        'commitHash': commitHash,
         'hasUncommittedChanges': hasUncommittedChanges,
         'recentBranches': recentBranches,
+        'uncommittedCount': uncommittedCount,
       };
     } catch (e) {
       // If git operations fail, return null to indicate no git state

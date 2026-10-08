@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../presentation/providers/settings_provider.dart';
 import '../../../presentation/providers/workspace_provider.dart';
@@ -56,7 +57,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     // 4. Terminal Emulator
     String detectedTerm = 'Non détecté (fallback sh)';
-    for (final term in ['x-terminal-emulator', 'cosmic-term', 'konsole', 'gnome-terminal', 'xterm']) {
+    for (final term in ['ptyxis', 'cosmic-term', 'konsole', 'gnome-terminal', 'alacritty', 'kitty', 'x-terminal-emulator', 'xterm']) {
       try {
         final res = await Process.run('which', [term]);
         if (res.exitCode == 0) {
@@ -65,9 +66,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         }
       } catch (_) {}
     }
-    results['Terminal Emulator'] = detectedTerm;
+    results['Émulateur de Terminal'] = detectedTerm;
 
-    // 5. Window Server
+    // 5. Window Control Tools
+    try {
+      final xdo = await Process.run('which', ['xdotool']);
+      results['xdotool'] = xdo.exitCode == 0 ? 'Installé' : 'Non installé';
+    } catch (_) {
+      results['xdotool'] = 'Non installé';
+    }
+
+    try {
+      final wmc = await Process.run('which', ['wmctrl']);
+      results['wmctrl'] = wmc.exitCode == 0 ? 'Installé' : 'Non installé';
+    } catch (_) {
+      results['wmctrl'] = 'Non installé';
+    }
+
+    // 6. Window Server
     final display = Platform.environment['WAYLAND_DISPLAY'] != null
         ? 'Wayland (${Platform.environment['WAYLAND_DISPLAY']})'
         : (Platform.environment['DISPLAY'] != null ? 'X11 (${Platform.environment['DISPLAY']})' : 'Inconnu');
@@ -85,25 +101,127 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final workspacesAsync = ref.read(workspaceProvider);
     workspacesAsync.whenData((workspaces) {
       final jsonList = workspaces.map((ws) => ref.read(workspaceProvider.notifier).exportToJson(ws.id)).toList();
+      final fullJson = '[\n${jsonList.join(',\n')}\n]';
+
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Export Global des Workspaces'),
           content: SizedBox(
-            width: 500,
-            child: SingleChildScrollView(
-              child: SelectableText(
-                '[\n${jsonList.join(',\n')}\n]',
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-              ),
+            width: 540,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '${workspaces.length} workspace(s) exporté(s) au format JSON standard :',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 280),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      fullJson,
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           actions: [
+            FilledButton.tonalIcon(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: fullJson));
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('JSON copié dans le presse-papiers !'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.copy, size: 16),
+              label: const Text('Copier'),
+            ),
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fermer')),
           ],
         ),
       );
     });
+  }
+
+  void _importWorkspaceDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Importer un Workspace depuis JSON'),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Collez le contenu JSON d\'un workspace exporté précédemment :',
+                style: TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  hintText: '{\n  "id": "...",\n  "name": "Mon Projet",\n  ...\n}',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                  contentPadding: EdgeInsets.all(10),
+                ),
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
+          FilledButton.icon(
+            onPressed: () async {
+              final text = controller.text.trim();
+              if (text.isEmpty) return;
+              try {
+                final imported = await ref.read(workspaceProvider.notifier).importFromJson(text);
+                if (mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Workspace "${imported.name}" importé avec succès !'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erreur de format JSON: $e'),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.file_download_outlined, size: 16),
+            label: const Text('Importer'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -187,7 +305,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Raccourcis clavier globaux'),
-                    subtitle: const Text('Permet de switcher de workspace avec Ctrl+1..9'),
+                    subtitle: const Text('Permet de switcher de workspace avec Ctrl+1..9 et ouvrir la palette Ctrl+K'),
                     value: settings.enableGlobalHotkeys,
                     onChanged: notifier.updateGlobalHotkeys,
                   ),
@@ -281,12 +399,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
                     children: [
                       FilledButton.tonalIcon(
                         onPressed: _exportAllWorkspaces,
                         icon: const Icon(Icons.download, size: 16),
                         label: const Text('Exporter tous les workspaces'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _importWorkspaceDialog,
+                        icon: const Icon(Icons.upload, size: 16),
+                        label: const Text('Importer depuis JSON'),
                       ),
                     ],
                   ),

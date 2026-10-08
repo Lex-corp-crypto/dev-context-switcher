@@ -6,6 +6,7 @@ import '../../../../domain/entities/terminal_snapshot.dart';
 import '../../../../domain/entities/browser_snapshot.dart';
 import '../../../../domain/entities/docker_snapshot.dart';
 import '../../../../domain/entities/git_snapshot.dart';
+import '../../../../domain/entities/workspace_task.dart';
 import '../../providers/workspace_provider.dart';
 import 'widgets/window_picker.dart';
 import 'widgets/process_picker.dart';
@@ -31,9 +32,17 @@ class _CapturePageState extends ConsumerState<CapturePage> {
   late final TextEditingController _nameController;
   late final TextEditingController _pathController;
   final _tagController = TextEditingController();
+  final _notesController = TextEditingController();
+  final _taskInputController = TextEditingController();
+  final _startupCommandController = TextEditingController();
 
   final List<String> _tags = [];
   final List<String> _customUrls = [];
+  final List<String> _initialTasks = [];
+  final List<String> _startupCommands = [];
+
+  bool _isFavorite = false;
+  String _selectedColorHex = 'FF2196F3';
 
   bool _isLoading = false;
   bool _isSaving = false;
@@ -51,6 +60,17 @@ class _CapturePageState extends ConsumerState<CapturePage> {
   final Set<String> _selectedTerminalIds = {};
   final Set<String> _selectedContainerIds = {};
 
+  static const List<Map<String, dynamic>> _colorPresets = [
+    {'name': 'Bleu', 'hex': 'FF2196F3', 'color': Colors.blue},
+    {'name': 'Vert', 'hex': 'FF4CAF50', 'color': Colors.green},
+    {'name': 'Violet', 'hex': 'FF9C27B0', 'color': Colors.purple},
+    {'name': 'Ambre', 'hex': 'FFFFC107', 'color': Colors.amber},
+    {'name': 'Orange', 'hex': 'FFFF9800', 'color': Colors.orange},
+    {'name': 'Cyan', 'hex': 'FF00BCD4', 'color': Colors.cyan},
+    {'name': 'Rose', 'hex': 'FFE91E63', 'color': Colors.pink},
+    {'name': 'Teal', 'hex': 'FF009688', 'color': Colors.teal},
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +84,9 @@ class _CapturePageState extends ConsumerState<CapturePage> {
     _nameController.dispose();
     _pathController.dispose();
     _tagController.dispose();
+    _notesController.dispose();
+    _taskInputController.dispose();
+    _startupCommandController.dispose();
     super.dispose();
   }
 
@@ -108,6 +131,26 @@ class _CapturePageState extends ConsumerState<CapturePage> {
     setState(() => _tags.remove(tag));
   }
 
+  void _addTask() {
+    final text = _taskInputController.text.trim();
+    if (text.isNotEmpty && !_initialTasks.contains(text)) {
+      setState(() {
+        _initialTasks.add(text);
+        _taskInputController.clear();
+      });
+    }
+  }
+
+  void _addStartupCommand() {
+    final text = _startupCommandController.text.trim();
+    if (text.isNotEmpty && !_startupCommands.contains(text)) {
+      setState(() {
+        _startupCommands.add(text);
+        _startupCommandController.clear();
+      });
+    }
+  }
+
   Future<void> _saveWorkspace() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -132,6 +175,14 @@ class _CapturePageState extends ConsumerState<CapturePage> {
         );
       }
 
+      final tasks = _initialTasks.map((t) {
+        return WorkspaceTask(
+          id: '${DateTime.now().millisecondsSinceEpoch}_${t.hashCode}',
+          title: t,
+          isCompleted: false,
+        );
+      }).toList();
+
       await ref.read(workspaceProvider.notifier).capture(
         name: _nameController.text.trim(),
         projectPath: _pathController.text.trim().isNotEmpty ? _pathController.text.trim() : null,
@@ -142,6 +193,11 @@ class _CapturePageState extends ConsumerState<CapturePage> {
         selectedBrowsers: browsers,
         selectedContainers: selectedContainers,
         gitSnapshot: gitSnapshot,
+        tasks: tasks,
+        notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+        isFavorite: _isFavorite,
+        colorHex: _selectedColorHex,
+        startupCommands: _startupCommands,
       );
 
       if (mounted) {
@@ -201,13 +257,30 @@ class _CapturePageState extends ConsumerState<CapturePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Informations Générales',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Informations Générales',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              Row(
+                                children: [
+                                  const Text('Favori', style: TextStyle(fontSize: 13)),
+                                  IconButton(
+                                    icon: Icon(
+                                      _isFavorite ? Icons.star : Icons.star_border,
+                                      color: _isFavorite ? Colors.amber : Colors.grey,
+                                    ),
+                                    onPressed: () => setState(() => _isFavorite = !_isFavorite),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 10),
                           TextFormField(
                             controller: _nameController,
                             decoration: const InputDecoration(
@@ -233,6 +306,44 @@ class _CapturePageState extends ConsumerState<CapturePage> {
                             ),
                           ),
                           const SizedBox(height: 14),
+
+                          // Color selector
+                          const Text('Couleur d\'accent :', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            children: _colorPresets.map((preset) {
+                              final isSelected = _selectedColorHex == preset['hex'];
+                              return GestureDetector(
+                                onTap: () => setState(() => _selectedColorHex = preset['hex']),
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: preset['color'] as Color,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected ? Colors.white : Colors.transparent,
+                                      width: 2.5,
+                                    ),
+                                    boxShadow: [
+                                      if (isSelected)
+                                        BoxShadow(
+                                          color: (preset['color'] as Color).withOpacity(0.5),
+                                          blurRadius: 6,
+                                          spreadRadius: 1,
+                                        ),
+                                    ],
+                                  ),
+                                  child: isSelected
+                                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                      : null,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 14),
+
                           // Tags input
                           Row(
                             children: [
@@ -274,12 +385,120 @@ class _CapturePageState extends ConsumerState<CapturePage> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Initial Tasks & Scratchpad Card
+                  Card(
+                    elevation: 1,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.4),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Objectifs & Bloc-notes Préalables',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _taskInputController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Ajouter un objectif ou une tâche',
+                                    prefixIcon: Icon(Icons.checklist),
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                  ),
+                                  onSubmitted: (_) => _addTask(),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              FilledButton.tonal(
+                                onPressed: _addTask,
+                                child: const Text('Ajouter'),
+                              ),
+                            ],
+                          ),
+                          if (_initialTasks.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            ..._initialTasks.map((t) => ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.circle_outlined, size: 16),
+                                  title: Text(t),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.close, size: 16),
+                                    onPressed: () => setState(() => _initialTasks.remove(t)),
+                                  ),
+                                )),
+                          ],
+                          const SizedBox(height: 14),
+                          TextField(
+                            controller: _notesController,
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                              labelText: 'Notes préliminaires (optionnel)',
+                              hintText: 'Credentials, commandes utiles, contexte de travail...',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          // Startup commands
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _startupCommandController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Commande de démarrage personnalisée',
+                                    hintText: 'ex: npm run dev, docker compose up -d',
+                                    prefixIcon: Icon(Icons.play_arrow_outlined),
+                                    border: OutlineInputBorder(),
+                                    isDense: true,
+                                  ),
+                                  onSubmitted: (_) => _addStartupCommand(),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              FilledButton.tonal(
+                                onPressed: _addStartupCommand,
+                                child: const Text('Ajouter'),
+                              ),
+                            ],
+                          ),
+                          if (_startupCommands.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            ..._startupCommands.map((c) => ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.terminal, size: 16, color: Colors.deepPurpleAccent),
+                                  title: Text(c, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.close, size: 16),
+                                    onPressed: () => setState(() => _startupCommands.remove(c)),
+                                  ),
+                                )),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Section Title & Batch controls
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Composants à inclure dans le snapshot',
+                        'Composants détectés à capturer',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),

@@ -1,0 +1,1 @@
+#!/usr/bin/env bash\n# Run a profile build and upload debug info for analysis.\nset -euo pipefail\n\nflutter clean\nflutter build apk --profile\n# Store profile artefacts (optional)\n# mkdir -p profile_artifacts && cp debug_info/* profile_artifacts/\n

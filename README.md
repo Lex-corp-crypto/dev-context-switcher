@@ -1,4 +1,4 @@
-# Dev Context Switcher 🚀
+# Dev Context Switcher 🚀 (Ultimate Edition)
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.16+-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.2+-0175C2?logo=dart&logoColor=white)](https://dart.dev)
@@ -7,7 +7,7 @@
 
 > 🇫🇷 **[Cliquez ici pour lire la version française](#-version-française)**
 
-A modern, cross-platform developer workspace manager built with Flutter and Riverpod. Capture, switch, and instantly restore your complete development environment—including application windows, terminal sessions with working directories, background processes, Git branches, Docker containers, and browser tabs.
+A modern, cross-platform developer workspace manager built with Flutter and Riverpod. Capture, switch, and instantly restore your complete development environment—including application windows, virtual screen topologies, terminal sessions with working directories, background processes, Git branches, Docker containers, browser tabs, interactive task checklists, scratchpad notes, and custom startup commands.
 
 ---
 
@@ -15,35 +15,51 @@ A modern, cross-platform developer workspace manager built with Flutter and Rive
 
 - **📸 Intelligent & Selective System Capture**:
   - Live inspection of active desktop windows (titles, geometry, X/Y/Width/Height bounds).
-  - Dev process detection with filtering (Node, Python, Dart/Flutter, VS Code, Rust, Go, Docker, Java) including live CPU & RAM usage.
+  - Dev process detection with filtering (Node, Python, Dart/Flutter, VS Code, Rust, Go, Docker, Java, C++) including live CPU & RAM usage.
   - Active terminal sessions detection with working directory (`/proc/$pid/cwd` resolution).
   - Docker containers inspection (running containers, images, exposed ports, status).
   - Git repository state capture (active branch, short commit hash, uncommitted changes indicator).
   - Browser reference URLs and dev localhost tabs.
+  - Custom color themes and initial tasks/notes during capture.
+- **🖥️ 2D Virtual Desktop Window Layout Canvas**:
+  - Proportional virtual monitor visualization scaling windows with pixel geometry badges, app icons, and interactive hover highlights.
+- **✅ Interactive Objectives & Tasks Checklist**:
+  - Integrated task checklist per workspace with real-time completion tracking and progress bar.
+- **📝 Context Scratchpad & Notes**:
+  - Persistent notes and reminders (documentation links, credentials, next steps) attached to each context.
+- **⚡ Custom Startup Commands & Environment Variables**:
+  - Configure pre/post launch commands (e.g., `npm run dev`, `docker compose up -d`, `cargo watch`) executed seamlessly upon context restoration.
 - **🚀 1-Click Instant Restoration**:
   - Automatically re-opens terminals in their respective working directories.
   - Checks out the exact Git branch.
   - Starts stopped Docker containers.
-  - Launches development processes and IDEs.
-  - Opens reference URLs in the default browser.
-  - Detailed restoration log report with success/failure breakdowns.
-- **🎯 Intelligent Project Auto-Detection**:
-  - Continuously analyzes active project directories (Flutter, React, Next.js, Node, Python, Rust, Go, Java, Git).
-  - Prominently displays a top banner with a 1-click *"Capture this project context"* button.
-- **⌨️ Keyboard Shortcuts & Quick Switcher**:
-  - Quick access bar with shortcuts `Ctrl+1` through `Ctrl+9` for instantaneous workspace switching.
-  - `Ctrl+K` command palette for fast workspace searching.
+  - Executes configured startup commands with environment variables.
+  - Repositions windows and opens reference URLs.
+  - Detailed restoration log report with execution time and statistics.
+- **⭐ Favorites & Custom Sorting**:
+  - Pin favorite workspaces to the top with 1-click star icons.
+  - Filter by "Favorites" or tags.
+  - Sort by "Favorites first", "Newest", "Last restored", or "Alphabetical".
+- **🎯 Multi-Stack Project Auto-Detection**:
+  - Analyzes local directories: Flutter, React, Next.js, Vue, Svelte, Astro, Node, Python, Rust, Go, Java, Kotlin, PHP, C++, Docker Compose, Git.
+  - Top dashboard banner with 1-click *"Capture this project context"* button.
+- **⌨️ Keyboard Shortcuts & Command Palette**:
+  - Quick access bar with `Ctrl+1` through `Ctrl+9` for instantaneous workspace switching.
+  - `Ctrl+K` command palette for fast workspace searching and action execution.
   - `Ctrl+N` for instant capture, `Ctrl+F` for filtering.
-- **📦 Pre-Built Workspace Templates**:
-  - *Flutter Desktop & Web* (VS Code, test/run terminals, pub.dev reference).
-  - *Full-Stack Web* (React/Next.js frontend, Node backend, localhost tabs).
-  - *Python AI & Data Science* (Jupyter notebook, FastAPI server, venv).
-  - *DevOps & Microservices* (Docker Compose, PostgreSQL, Redis, Adminer).
+- **📦 Pre-Built Developer Templates**:
+  - *Flutter Desktop & Web*
+  - *Full-Stack Web (Node & React)*
+  - *Rust Systems & High-Perf Backend*
+  - *Python AI & Data Science*
+  - *Next.js & Supabase Modern Fullstack*
+  - *DevOps & Docker Microservices*
 - **🛠️ Integrated System Diagnostics**:
-  - Live health check for Git, Docker daemon, VS Code CLI (`code`), terminal emulators (`cosmic-term`, `konsole`, `x-terminal-emulator`, `xterm`), and display server (Wayland / X11).
+  - Live health check for Git, Docker daemon, VS Code CLI (`code`), terminal emulators (`ptyxis`, `cosmic-term`, `konsole`, `alacritty`, `kitty`, `gnome-terminal`, `xterm`), window managers (`xdotool`, `wmctrl`), and display server (Wayland / X11).
 - **💾 JSON Backup, Export & Sharing**:
   - Safe local JSON storage.
-  - Export single or all workspaces for team sharing and migration.
+  - 1-click export to clipboard or JSON file.
+  - 1-click JSON import modal with format validation.
 
 ---
 
@@ -57,15 +73,15 @@ lib/
 ├── main.dart                               # Entrypoint with ProviderScope
 ├── routing/                                # Routes and declarative AppRouter
 ├── domain/                                 # Domain layer (Entities, Repository contracts)
-│   ├── entities/                           # Workspace, WindowSnapshot, ProcessSnapshot, GitSnapshot...
+│   ├── entities/                           # Workspace, WorkspaceTask, WindowSnapshot, GitSnapshot...
 │   └── repositories/                       # Abstract repository contracts
 ├── data/                                   # Data layer
 │   ├── models/                             # JSON-serializable models
 │   └── repositories/                       # File-based implementations with ~/.config persistence
 ├── services/                               # Application services
 │   ├── workspace_capture_service.dart     # System inspector and snapshot builder
-│   ├── workspace_restoration_service.dart # Modular restoration engine with detailed report
-│   └── project_detector_service.dart       # Multi-language project detector
+│   ├── workspace_restoration_service.dart # Modular restoration engine with startup commands & report
+│   └── project_detector_service.dart       # Multi-language project detector (Rust, Go, Python, Node...)
 ├── platform/                               # OS-specific adapters
 │   ├── contracts/                          # WindowManager, TerminalManager, DockerManager contracts
 │   ├── linux/                              # Linux implementations (xdotool, wmctrl, /proc, shells)
@@ -77,7 +93,7 @@ lib/
     └── pages/
         ├── home/                           # Dashboard, quick restore bar, search, tags, cards
         ├── capture/                        # Capture studio with real-time inspector and pickers
-        ├── workspace_detail/               # Workspace inspection, selective restore, visualizer
+        ├── workspace_detail/               # Workspace inspection, selective restore, 2D visualizer, tasks
         ├── templates/                      # Ready-to-use developer presets
         └── settings/                       # Theme mode, diagnostics, backup import/export
 ```
@@ -87,7 +103,7 @@ lib/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Flutter SDK (>= 3.0.0)
+- Flutter SDK (>= 3.16.0)
 - Recommended tools on host: `git`, `docker`, `code` (VS Code)
 
 ### Run on Linux Desktop
@@ -97,13 +113,11 @@ flutter run -d linux
 ```
 
 ### Launch Script
-For convenience, you can use the provided launch script:
 ```bash
 ./start.sh          # Gets dependencies and runs the app
 ./start.sh -d linux # Explicitly specify Linux
 ./start.sh --release # Run in release mode
 ```
-The script (`start.sh`) automatically handles dependency fetching and launches the app with any additional Flutter arguments you provide.
 
 ### Run Tests
 ```bash
@@ -120,9 +134,9 @@ flutter analyze
 
 # 🇫🇷 Version Française
 
-> 🇬🇧 **[Click here to go back to English version](#dev-context-switcher-)**
+> 🇬🇧 **[Click here to go back to English version](#dev-context-switcher--ultimate-edition)**
 
-Gestionnaire d'environnements de développement desktop moderne, multiplateforme et réactif, conçu avec Flutter et Riverpod. Il permet de capturer, basculer et restaurer en un instant l'intégralité de vos sessions de travail : fenêtres applicatives, terminaux positionnés dans leurs répertoires, processus d'arrière-plan, branches Git, conteneurs Docker et onglets de référence.
+Gestionnaire d'environnements de développement desktop moderne, ultra-complet et réactif, conçu avec Flutter et Riverpod. Il permet de capturer, basculer et restaurer en un instant l'intégralité de vos sessions de travail : fenêtres applicatives avec topologie visuelle 2D, terminaux positionnés dans leurs répertoires, processus d'arrière-plan, branches Git, conteneurs Docker, onglets web, objectifs/tâches interactifs, bloc-notes et commandes de démarrage automatisées.
 
 ---
 
@@ -130,20 +144,31 @@ Gestionnaire d'environnements de développement desktop moderne, multiplateforme
 
 - **📸 Capture Intelligente & Sélective (Capture Studio)** :
   - Détection en direct des fenêtres actives avec dimensions et coordonnées (X, Y, Largeur, Hauteur).
-  - Filtrage automatique des processus développeurs pertinents (Node, Python, Dart, Flutter, VS Code, Rust, Go, Docker) avec consommation CPU et RAM.
+  - Filtrage automatique des processus développeurs pertinents (Node, Python, Dart, Flutter, VS Code, Rust, Go, Docker, C++) avec consommation CPU et RAM.
   - Détection automatique des sessions de terminaux et de leurs répertoires de travail via `/proc/$pid/cwd`.
   - Détection des conteneurs Docker en cours d'exécution avec statut et mappage de ports.
   - Capture de l'état Git (branche active, hash de commit, présence de modifications non commitées).
-  - Gestion des onglets web et URLs localhost de travail.
+  - Personnalisation de couleur d'accent, favori, objectifs initiaux et commandes de démarrage dès la capture.
+- **🖥️ Topologie Visuelle 2D des Fenêtres (Virtual Monitor)** :
+  - Rendu proportionnel des fenêtres sur un canevas virtuel interactif avec badges de géométrie en pixels, icônes applicatives et mise en surbrillance au survol.
+- **✅ Liste de Tâches & Objectifs Intégrée** :
+  - Suivi en temps réel des tâches par contexte avec barre de progression dynamique.
+- **📝 Bloc-notes & Mémo de Contexte** :
+  - Bloc-notes persistant pour conserver les liens de documentation, instructions, identifiants locaux et prochaines étapes.
+- **⚡ Commandes de Démarrage & Variables d'Environnement** :
+  - Configuration de commandes personnalisées (ex : `npm run dev`, `docker compose up -d`, `cargo watch`) exécutées automatiquement lors de la restauration.
 - **⚡ Restauration Instantanée & Modulaire** :
   - Relance automatique des terminaux dans les bons dossiers.
   - Checkout transparent de la branche Git du projet.
   - Démarrage automatique des conteneurs Docker requis.
-  - Lancement des applications et fenêtres associées.
-  - Ouverture des URLs dans le navigateur par défaut.
+  - Exécution des commandes de démarrage personnalisées.
+  - Repositionnement intelligent des fenêtres et ouverture des URLs web.
   - Rapport d'exécution en direct (`RestorationReport`) avec journal des opérations.
-- **🎯 Détection Automatique de Projet** :
-  - Détection instantanée de vos projets locaux (Flutter, React, Next.js, Node, Python, Rust, Go, Java, Git).
+- **⭐ Favoris & Tri Personnalisé** :
+  - Épinglage des contextes favoris en 1 clic (étoile dorée).
+  - Filtre "Favoris" et tri par : "Favoris d'abord", "Plus récents", "Dernière restauration", "Alphabétique".
+- **🎯 Détection Automatique Multi-Langages** :
+  - Détection instantanée : Flutter, React, Next.js, Vue, Svelte, Astro, Node, Python, Rust, Go, Java, Kotlin, PHP, C++, Docker Compose, Git.
   - Bannière intelligente en haut du tableau de bord avec action directe *"Capturer ce contexte"*.
 - **⌨️ Raccourcis Clavier & Accès Rapide** :
   - Raccourcis `Ctrl+1` à `Ctrl+9` pour commuter instantanément d'un workspace à l'autre.
@@ -152,13 +177,16 @@ Gestionnaire d'environnements de développement desktop moderne, multiplateforme
 - **📦 Modèles Préconfigurés (Templates)** :
   - *Flutter Desktop & Web*
   - *Full-Stack Web (Node & React)*
-  - *Python AI & Data Science (Jupyter & FastAPI)*
-  - *DevOps & Docker Microservices (Postgres & Redis)*
+  - *Rust Systems & High-Perf Backend*
+  - *Python AI & Data Science*
+  - *Next.js & Supabase Modern Fullstack*
+  - *DevOps & Docker Microservices*
 - **🛠️ Diagnostics Système Intégrés** :
-  - Vérification continue de Git, Docker, VS Code, émulateurs de terminaux (`cosmic-term`, `konsole`, `x-terminal-emulator`, `xterm`) et serveur d'affichage (Wayland / X11).
+  - Vérification continue de Git, Docker, VS Code, émulateurs de terminaux (`ptyxis`, `cosmic-term`, `konsole`, `alacritty`, `kitty`, `gnome-terminal`, `xterm`), outils de fenêtrage (`xdotool`, `wmctrl`) et serveur d'affichage (Wayland / X11).
 - **💾 Sauvegarde & Export JSON** :
   - Sauvegarde locale sécurisée dans `~/.config/dev_context_switcher/workspaces`.
-  - Export individuel ou global pour partage d'équipe ou sauvegarde.
+  - Export individuel ou global avec copie dans le presse-papiers en un clic.
+  - Modal d'importation JSON avec validation de syntaxe.
 
 ---
 
@@ -174,7 +202,7 @@ flutter run -d linux
 # Exécution de la suite de tests automatisés
 flutter test
 
-# Analyse statique du code (0 warnings, 0 errors)
+# Analyse statique du code (0 avertissements, 0 erreurs)
 flutter analyze
 ```
 
